@@ -21,8 +21,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from gameday_lab.workflows.runner import STEPS, RefundRequest  # noqa: F401  (STEPS: use it in run())
-from gameday_lab.workflows.services import DurableStore, ServiceError, Services, ServiceTimeout  # noqa: F401
+from gameday_lab.workflows.runner import STEPS, RefundRequest
+from gameday_lab.workflows.services import DurableStore, ServiceError, Services, ServiceTimeout
 
 T = TypeVar("T")
 
@@ -30,12 +30,12 @@ T = TypeVar("T")
 def idempotency_key(req: RefundRequest, step: str) -> str:
     """TODO(student): a key that is identical for every retry / restart of the same
     side effect of the same session, and different across sessions and steps."""
-    raise NotImplementedError("TODO(student): idempotency_key()")
+    return f"refund-agent:{req.session_id}:{step}"
 
 
 def checkpoint_key(req: RefundRequest, step: str) -> str:
     """TODO(student): DurableStore key under which the result of ``step`` is saved."""
-    raise NotImplementedError("TODO(student): checkpoint_key()")
+    return f"ckpt:{req.session_id}:{step}"
 
 
 class WorkflowExecutor:
@@ -47,7 +47,14 @@ class WorkflowExecutor:
     def _retry(self, fn: Callable[[], T]) -> T:
         """TODO(student): call fn(); retry on ServiceError / ServiceTimeout up to
         ``max_attempts`` times (re-raise the last one). Never catch WorkerCrash."""
-        raise NotImplementedError("TODO(student): _retry()")
+        last: Exception | None = None
+        for _ in range(self.max_attempts):
+            try:
+                return fn()
+            except (ServiceError, ServiceTimeout) as exc:
+                last = exc
+        assert last is not None
+        raise last
 
     def _step(self, req: RefundRequest, state: dict[str, Any], step: str) -> Any:
         """PROVIDED: execute one step. ``state`` holds results of earlier steps."""
@@ -75,4 +82,15 @@ class WorkflowExecutor:
         * otherwise execute it with ``self._step`` and checkpoint the result
         * return {"status": "done", **state}
         """
-        raise NotImplementedError("TODO(student): run()")
+        state: dict[str, Any] = {}
+        for step in STEPS:
+            saved = self.store.get(checkpoint_key(req, step))
+            if saved is not None:
+                state[step] = saved["result"]
+                continue
+            result = self._step(req, state, step)
+            # checkpoint only AFTER the step succeeded (a crash in between is
+            # healed by the idempotency key on the re-run)
+            self.store.put(checkpoint_key(req, step), {"result": result})
+            state[step] = result
+        return {"status": "done", **state}
