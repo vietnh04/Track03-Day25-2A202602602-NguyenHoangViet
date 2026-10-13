@@ -60,7 +60,7 @@ on_error(kind):
 
 2. **`attempt_timeout_s: 30`.** G6: availability tụt 1,000 → **0,9488** (FAIL, ngưỡng 95%); `give_up_reasons` = {deadline: 109, no_provider_available: 13}. Call gửi vào `alpha-eu` đang treo phải chờ hết 30 s = hết deadline của user, không còn thời gian fail over. p95 chỉ 5,3 s (thậm chí thấp hơn 6,03 s ban đầu) vì chỉ tính trên lượt *thành công* — survivorship bias. G4 gần như không đổi (avail 1,0, p95 5,61 s) vì `alpha` vẫn trả lời (~6 s), không bao giờ chạm timeout nên timeout dài/ngắn không có tác dụng; breaker bắt call chậm lo phần đó. Timeout đúng nên dựa vào: vài lần p99 lúc bình thường (~1,2–1,8 s service) **và** phải để chừa đủ thời gian cho ít nhất một lần fail over trong deadline 30 s; 8 s thoả cả hai.
 
-3. **Bỏ lọc tool calling khỏi `ladder()`.** *Chưa chạy* — đây là thí nghiệm đối chứng cần sửa code `ladder()`; xem README mục 5 (G6 `incompatible_routes` phải = 0). Giải thích cho PM: không lọc thì có những lượt cần gọi tool (hoàn tiền, tra đơn) bị gửi sang `gamma-mini` — model không có tool calling — nên chắc chắn thất bại ngay dù hệ thống "có" fail over; user nhận lỗi trong khi vẫn tốn tiền cho call vô ích.
+3. **Bỏ lọc tool calling khỏi `ladder()`.** G6: `incompatible_routes` 0 → **253**, availability 1,000 → **0,894** (FAIL, ngưỡng 95%); `give_up_reasons` = {incompatible_model_output: 253}. Giải thích cho PM: không lọc thì 253 lượt cần gọi tool (hoàn tiền, tra đơn) bị gửi sang `gamma-mini` — model không có tool calling — nên thất bại chắc chắn dù hệ thống "có" fail over; p95 (5,65 s) vẫn trông đẹp vì chỉ tính lượt thành công. Khách mất ~10,6% lượt xử lý, vẫn tốn tiền cho call vô ích, và dashboard latency không báo động.
 
 ## 4. Workflow hoàn tiền
 
