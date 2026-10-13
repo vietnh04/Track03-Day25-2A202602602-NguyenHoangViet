@@ -1,6 +1,6 @@
 # Lab 25B — Report
 
-**Họ tên / nhóm:** <điền họ tên + MSV>  **Commit:** <điền hash sau khi push>  **Điểm tự động (`make grade`):** 84 / 88 (4đ dữ liệu ẩn của Part E không chấm được cục bộ)
+**Họ tên / nhóm:** Nguyễn Hoàng Việt — 2A202602602  **Commit:** <điền hash sau khi push>  **Điểm tự động (`make grade`):** 84 / 88 (4đ dữ liệu ẩn của Part E không chấm được cục bộ)
 
 > Số liệu lấy từ `reports/gameday/*.json`, `reports/workflows.json`, `reports/slo.json`, `reports/cache/*.json` (seed 25).
 
